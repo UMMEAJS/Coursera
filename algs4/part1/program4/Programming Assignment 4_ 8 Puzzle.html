@@ -1,0 +1,336 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- saved from url=(0063)http://coursera.cs.princeton.edu/algs4/assignments/8puzzle.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<!--  ADD STATIC FINAL VARIABLE TO SOLVER AND USE AS ARGUMENT TO SELECT PRIORITY FUNCTION ?
+-->
+
+<title>
+Programming Assignment 4: 8 Puzzle
+</title>
+</head>
+
+<body>
+<h2>Programming Assignment 4: 8 Puzzle</h2>
+
+<p>
+
+Write a program to solve the 8-puzzle problem
+(and its natural generalizations) using the 
+A* search algorithm.
+
+</p><p><b>The problem.</b>
+The <a href="http://en.wikipedia.org/wiki/Fifteen_puzzle">8-puzzle problem</a>
+is a puzzle invented and popularized by Noyes Palmer Chapman in the 1870s. It is 
+played on a 3-by-3 grid with 8 square blocks labeled 1 through 8 and a blank 
+square. Your goal is to rearrange the blocks so that they are in order, using
+as few moves as possible. 
+You are permitted to slide blocks horizontally or vertically
+into the blank square. 
+The following 
+shows a sequence of legal moves from an <em>initial board</em> (left)
+to the <em>goal board</em> (right).
+</p><pre><blockquote>
+    1  3        1     3        1  2  3        1  2  3        1  2  3
+ 4  2  5   =&gt;   4  2  5   =&gt;   4     5   =&gt;   4  5      =&gt;   4  5  6
+ 7  8  6        7  8  6        7  8  6        7  8  6        7  8 
+
+ initial        1 left          2 up          5 left          goal</blockquote></pre>
+
+<p>
+<b>Best-first search.</b>
+Now, we describe a solution to the problem that illustrates a 
+general artificial intelligence methodology known as the
+<a href="http://en.wikipedia.org/wiki/A*_search_algorithm">A* search algorithm</a>.
+We define a <em>search node</em> of the game to be a board, the number
+of moves made to reach the board, and the predecessor search node.
+First, insert the initial search node
+(the initial board, 0 moves, and a null predecessor search node) 
+into a priority queue. Then,
+delete from the priority queue the search node with the minimum priority,
+and insert onto the priority queue all neighboring search nodes
+(those that can be reached in one move from the dequeued search node).
+Repeat this procedure until the search node dequeued corresponds to a goal board.
+The success of this approach
+hinges on the choice of <em>priority function</em> for a search node. We 
+consider two priority functions:
+
+</p><ul>
+
+<li><em>Hamming priority function.</em>
+The number of blocks in the wrong position,
+plus the number of moves made so far to get to the search node.
+Intuitively, a search node with a small number of blocks in the wrong position
+is close to the goal, and we prefer a search node that
+have been reached using a small number of moves.
+
+<p></p></li><li><em>Manhattan priority function.</em>
+The sum of the Manhattan distances (sum of the vertical and horizontal distance)
+from the blocks to their goal positions,
+plus the number of moves made so far to get to the search node.
+
+</li></ul>
+
+For example, the Hamming and Manhattan priorities of the initial search node
+below are 5 and 10, respectively.
+
+<pre><blockquote>
+ 8  1  3        1  2  3     1  2  3  4  5  6  7  8    1  2  3  4  5  6  7  8
+ 4     2        4  5  6     ----------------------    ----------------------
+ 7  6  5        7  8        1  1  0  0  1  1  0  1    1  2  0  0  2  2  0  3
+
+ initial          goal         Hamming = 5 + 0          Manhattan = 10 + 0</blockquote></pre>
+
+
+<p>
+We make a key observation: To solve the puzzle from
+a given search node on the priority queue, the total number of moves we
+need to make (including those already made) is at least its priority,
+using either the Hamming or Manhattan priority function.
+(For Hamming priority, this is true because each block that is out of place
+must move at least once to reach its goal position.
+For Manhattan priority, this is true because each block must move
+its Manhattan distance from its goal position.
+Note that we do not count the blank square when computing the
+Hamming or Manhattan priorities.)
+Consequently, when the goal board is dequeued, we
+have discovered not only a sequence of moves from the
+initial board to the goal board, but one that makes the fewest number of moves. 
+(Challenge for the mathematically inclined: prove this fact.)
+
+</p><p><b>A critical optimization.</b>
+Best-first search has one annoying feature:
+search nodes corresponding to the same board
+are enqueued on the priority queue many times.
+To reduce unnecessary exploration of useless search nodes,
+when considering the neighbors of a search node, don't enqueue
+a neighbor if its board is the same as the board of the
+predecessor search node.
+
+</p><pre><blockquote>
+  8  1  3       8  1  3       8  1          8  1  3       8  1  3
+  4     2       4  2          4  2  3       4     2       4  2  5
+  7  6  5       7  6  5       7  6  5       7  6  5       7  6
+
+predecessor   search node    neighbor       neighbor      neighbor
+                                           (disallow)
+</blockquote></pre>
+
+<p><b>A second optimization.</b>
+To avoid recomputing the Manhattan priority of a search node from scratch each time during
+various priority queue operations, pre-compute its value when you construct the search node;
+save it in an instance variable; and return the saved value as needed.
+This caching technique is broadly applicable: consider using it in any situation where you
+are recomputing the same quantity many times and for which computing that quantity is a bottleneck 
+operation.
+
+<!--
+<p><b>Your task.</b>
+Write a program <code>Solver.java</code> that takes the name of a file as a command-line
+argument, reads the initial board from the file, and prints to standard output a sequence of
+boards that solves the puzzle in the fewest number of moves.
+Also print out the total number of moves.
+-->
+
+
+</p><p><b>Game tree.</b>
+One way to view the computation is as a <em>game tree</em>, where each search node
+is a node in the game tree and the children of a node correspond to its
+neighboring search nodes. The root of the game tree is the initial search node;
+the internal nodes have already been processed; the leaf nodes are maintained
+in a priority queue; at each step, the A* algorithm removes the node with the smallest
+priority from the priority queue and processes it (by adding its children
+to both the game tree and the priority queue).
+
+
+</p><center>
+<img src="./Programming Assignment 4_ 8 Puzzle_files/8puzzle-game-tree.png" width="715" alt="8puzzle game tree">
+</center>
+
+
+<p><b>Detecting unsolvable puzzles.</b>
+Not all initial boards can lead to the goal board by a sequence of legal moves,
+including the two below:
+
+</p><pre><blockquote> 1  2  3         1  2  3  4
+ 4  5  6         5  6  7  8
+ 8  7            9 10 11 12
+                13 15 14 
+unsolvable
+                unsolvable
+</blockquote></pre>
+
+To detect such situations,
+use the fact that boards
+are divided into two equivalence classes with respect to reachability:
+(i) those that lead to the goal board and (ii) those that
+lead to the goal board if we modify the initial board by
+swapping any pair of blocks (the blank square is not a block).
+(Difficult challenge for the mathematically inclined: prove this fact.)
+To apply the fact, 
+run the A* algorithm on <em>two</em> puzzle instances—one with the
+initial board and one with the initial board modified by
+swapping a pair of blocks—in lockstep
+(alternating back and forth between exploring search nodes in each of
+the two game trees).
+Exactly one of the two will lead to the goal board.
+
+<!--
+<p><li> Derive a mathematical formula that tells you whether a board is 
+solvable or not.
+
+</ul>
+-->
+
+
+<p><b>Board and Solver data types.</b>
+Organize your program by creating an immutable data type <code>Board</code> 
+with the following API:
+
+</p><p>
+</p><blockquote><pre><b>public class Board {</b>
+<b>    public Board(int[][] blocks)           </b><font color="gray">// construct a board from an n-by-n array of blocks</font>
+                                           <font color="gray">// (where blocks[i][j] = block in row i, column j)</font>
+<b>    public int dimension()                 </b><font color="gray">// board dimension n</font>
+<b>    public int hamming()                   </b><font color="gray">// number of blocks out of place</font>
+<b>    public int manhattan()                 </b><font color="gray">// sum of Manhattan distances between blocks and goal</font>
+<b>    public boolean isGoal()                </b><font color="gray">// is this board the goal board?</font>
+<b>    public Board twin()                    </b><font color="gray">// a board that is obtained by exchanging any pair of blocks</font>
+<b>    public boolean equals(Object y)        </b><font color="gray">// does this board equal y?</font>
+<b>    public Iterable&lt;Board&gt; neighbors()     </b><font color="gray">// all neighboring boards</font>
+<b>    public String toString()               </b><font color="gray">// string representation of this board (in the output format specified below)</font>
+
+<b>    public static void main(String[] args) </b><font color="gray">// unit tests (not graded)</font>
+}</pre></blockquote>
+
+<p><em>Corner cases.&nbsp;</em>
+You may assume that the constructor receives an <em>n</em>-by-<em>n</em> array
+containing the <em>n</em><sup>2</sup> integers between 0 and <em>n</em><sup>2</sup> − 1,
+where 0 represents the blank square.
+
+</p><p><em>Performance requirements.&nbsp;</em>
+Your implementation should support all <code>Board</code> methods in time
+proportional to <em>n</em><sup>2</sup> (or better) in the worst case.
+
+</p><p>
+Also, create an immutable data type <code>Solver</code> with the following API:
+
+
+</p><blockquote><pre><b>public class Solver {</b>
+<b>    public Solver(Board initial)           </b><font color="gray">// find a solution to the initial board (using the A* algorithm)</font>
+<b>    public boolean isSolvable()            </b><font color="gray">// is the initial board solvable?</font>
+<b>    public int moves()                     </b><font color="gray">// min number of moves to solve initial board; -1 if unsolvable</font>
+<b>    public Iterable&lt;Board&gt; solution()      </b><font color="gray">// sequence of boards in a shortest solution; null if unsolvable</font>
+<b>    public static void main(String[] args) </b><font color="gray">// solve a slider puzzle (given below)</font>
+}
+</pre>
+</blockquote>
+
+To implement the A* algorithm, <em>you must use 
+<a href="https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/MinPQ.html"><code>MinPQ</code></a>
+from algs4.jar for the priority queue(s)</em>.
+<p>
+</p><p><em>Corner cases.&nbsp;</em>
+The constructor should throw a <code>java.lang.IllegalArgumentException</code> if passed a null argument.
+
+</p><p><b>Solver test client.</b>
+Use the following test client to read a puzzle from a file
+(specified as a command-line argument) and print the solution to standard output.
+
+</p><blockquote><pre>public static void main(String[] args) {
+
+    <font color="gray">// create initial board from file</font>
+    In in = new In(args[0]);
+    int n = in.readInt();
+    int[][] blocks = new int[n][n];
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 0; j &lt; n; j++)
+            blocks[i][j] = in.readInt();
+    Board initial = new Board(blocks);
+
+    <font color="gray">// solve the puzzle</font>
+    Solver solver = new Solver(initial);
+
+    <font color="gray">// print solution to standard output</font>
+    if (!solver.isSolvable())
+        StdOut.println("No solution possible");
+    else {
+        StdOut.println("Minimum number of moves = " + solver.moves());
+        for (Board board : solver.solution())
+            StdOut.println(board);
+    }
+}
+</pre>
+</blockquote>
+
+
+<p><b>Input and output formats.</b>
+The input and output format for a board is the board dimension <em>n</em> followed by
+the <em>n</em>-by-<em>n</em>
+initial board, using 0 to represent the blank square.
+As an example,
+
+</p><pre><blockquote><b>% more puzzle04.txt</b>
+3
+ 0  1  3
+ 4  2  5
+ 7  8  6
+
+% <b>java-algs4 Solver puzzle04.txt</b>
+Minimum number of moves = 4
+
+3
+ 0  1  3 
+ 4  2  5 
+ 7  8  6 
+
+3
+ 1  0  3 
+ 4  2  5 
+ 7  8  6 
+
+3
+ 1  2  3 
+ 4  0  5 
+ 7  8  6 
+
+3
+ 1  2  3 
+ 4  5  0   
+ 7  8  6 
+
+3
+ 1  2  3 
+ 4  5  6 
+ 7  8  0
+</blockquote></pre>
+
+<pre><blockquote>% <b>more puzzle3x3-unsolvable.txt</b>
+3
+ 1  2  3
+ 4  5  6
+ 8  7  0
+
+% <b>java-algs4 Solver puzzle3x3-unsolvable.txt</b>
+No solution possible</blockquote></pre>
+
+Your program should work correctly for arbitrary <em>n</em>-by-<em>n</em> boards
+(for any 2 ≤ <em>n</em> &lt; 128), even if it is too slow to solve 
+some of them in a reasonable amount of time.
+
+
+
+<p>
+</p><p><b>Deliverables.</b>
+Submit only the files <code>Board.java</code> and <code>Solver.java</code> (with the Manhattan priority).
+We will supply <code>algs4.jar</code>.
+You may not call any library functions other those in
+<code>java.lang</code>, <code>java.util</code>, and <code>algs4.jar</code>.
+You must use 
+<a href="https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/MinPQ.html"><code>MinPQ</code></a>
+for the priority queue(s).
+
+
+
+
+</p><div id="SL_balloon_obj" alt="0" style="display: block;"><div id="SL_button" class="SL_ImTranslatorLogo" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/imtranslator-s.png&quot;); display: none; opacity: 0; left: 597px; top: 166px; transition: visibility 2s ease 0s, opacity 2s linear 0s;"></div><div id="SL_shadow_translation_result2" style="display: none;"></div><div id="SL_shadow_translator" style="display: none;"><div id="SL_planshet"><div id="SL_arrow_up" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/up.png&quot;);"></div><div id="SL_Bproviders"><div class="SL_BL_LABLE_ON" title="Google" id="SL_P0">G</div><div class="SL_BL_LABLE_ON" title="Microsoft" id="SL_P1">M</div><div class="SL_BL_LABLE_ON" title="Translator" id="SL_P2">T</div></div><div id="SL_alert_bbl" style="display: none;"><div id="SLHKclose" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/delete.png&quot;);"></div><div id="SL_alert_cont"></div></div><div id="SL_TB"><table id="SL_tables" cellspacing="1"><tr><td class="SL_td" width="10%" align="right"><input id="SL_locer" type="checkbox" title="锁定语言"></td><td class="SL_td" width="20%" align="left"><select id="SL_lng_from" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/select.png&quot;) 100% 0px no-repeat rgb(255, 255, 255);"><option value="auto">检测语言</option><option value="eo">世界语</option><option value="zh-CN">中文简体</option><option value="zh-TW">中文繁体</option><option value="da">丹麦语</option><option value="uk">乌克兰语</option><option value="uz">乌兹别克语</option><option value="ur">乌尔都语</option><option value="hy">亚美尼亚语</option><option value="ig">伊博语</option><option value="ru">俄语</option><option value="bg">保加利亚语</option><option value="sd">信德语</option><option value="sn">修纳语</option><option value="si">僧伽罗语</option><option value="hr">克罗地亚语</option><option value="is">冰岛语</option><option value="gl">加利西亚语</option><option value="ca">加泰罗尼亚语</option><option value="hu">匈牙利语</option><option value="zu">南非祖鲁语</option><option value="kn">卡纳达语</option><option value="lb">卢森堡语</option><option value="hi">印地语</option><option value="su">印尼巽他语</option><option value="jw">印尼爪哇语</option><option value="id">印尼语</option><option value="gu">古吉拉特语</option><option value="ky">吉尔吉斯语</option><option value="kk">哈萨克语</option><option value="tr">土耳其语</option><option value="tg">塔吉克语</option><option value="sr">塞尔维亚语</option><option value="st">塞索托语</option><option value="haw">夏威夷语</option><option value="cy">威尔士语</option><option value="bn">孟加拉语</option><option value="ceb">宿务语</option><option value="ne">尼泊尔语</option><option value="eu">巴斯克语</option><option value="af">布尔语(南非荷兰语)</option><option value="iw">希伯来语</option><option value="el">希腊语</option><option value="ku">库尔德语</option><option value="fy">弗里西语</option><option value="de">德语</option><option value="it">意大利语</option><option value="yi">意第绪语</option><option value="la">拉丁语</option><option value="lv">拉脱维亚语</option><option value="no">挪威语</option><option value="cs">捷克语</option><option value="sk">斯洛伐克语</option><option value="sl">斯洛文尼亚语</option><option value="sw">斯瓦希里语</option><option value="pa">旁遮普语</option><option value="ja">日语</option><option value="ps">普什图语</option><option value="ka">格鲁吉亚语</option><option value="mi">毛利语</option><option value="fr">法语</option><option value="pl">波兰语</option><option value="bs">波斯尼亚语</option><option value="fa">波斯语</option><option value="te">泰卢固语</option><option value="ta">泰米尔语</option><option value="th">泰语</option><option value="ht">海地克里奥尔语</option><option value="ga">爱尔兰语</option><option value="et">爱沙尼亚语</option><option value="sv">瑞典语</option><option value="be">白俄罗斯语</option><option value="xh">科萨</option><option value="co">科西嘉语</option><option value="lt">立陶宛语</option><option value="so">索马里语</option><option value="yo">约鲁巴语</option><option value="my">缅甸语</option><option value="ro">罗马尼亚语</option><option value="lo">老挝语</option><option value="fi">芬兰语</option><option value="gd">苏格兰盖尔语</option><option value="hmn">苗语</option><option value="en">英语</option><option value="nl">荷兰语</option><option value="tl">菲律宾语</option><option value="sm">萨摩亚语</option><option value="pt">葡萄牙语</option><option value="mn">蒙古语</option><option value="es">西班牙语</option><option value="ha">豪萨语</option><option value="vi">越南语</option><option value="az">阿塞拜疆语</option><option value="am">阿姆哈拉语</option><option value="sq">阿尔巴尼亚语</option><option value="ar">阿拉伯语</option><option value="ko">韩语</option><option value="mk">马其顿语</option><option value="mg">马尔加什语</option><option value="mr">马拉地语</option><option value="ml">马拉雅拉姆语</option><option value="ms">马来语</option><option value="mt">马耳他语</option><option value="km">高棉语</option><option value="ny">齐切瓦语</option></select></td><td class="SL_td" width="3" align="center"><div id="SL_switch_b" title="切换语言" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/switchb.png&quot;);"></div></td><td class="SL_td" width="20%" align="left"><select id="SL_lng_to" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/select.png&quot;) 100% 0px no-repeat rgb(255, 255, 255);"><option value="eo">世界语</option><option selected="selected" value="zh-CN">中文简体</option><option value="zh-TW">中文繁体</option><option value="da">丹麦语</option><option value="uk">乌克兰语</option><option value="uz">乌兹别克语</option><option value="ur">乌尔都语</option><option value="hy">亚美尼亚语</option><option value="ig">伊博语</option><option value="ru">俄语</option><option value="bg">保加利亚语</option><option value="sd">信德语</option><option value="sn">修纳语</option><option value="si">僧伽罗语</option><option value="hr">克罗地亚语</option><option value="is">冰岛语</option><option value="gl">加利西亚语</option><option value="ca">加泰罗尼亚语</option><option value="hu">匈牙利语</option><option value="zu">南非祖鲁语</option><option value="kn">卡纳达语</option><option value="lb">卢森堡语</option><option value="hi">印地语</option><option value="su">印尼巽他语</option><option value="jw">印尼爪哇语</option><option value="id">印尼语</option><option value="gu">古吉拉特语</option><option value="ky">吉尔吉斯语</option><option value="kk">哈萨克语</option><option value="tr">土耳其语</option><option value="tg">塔吉克语</option><option value="sr">塞尔维亚语</option><option value="st">塞索托语</option><option value="haw">夏威夷语</option><option value="cy">威尔士语</option><option value="bn">孟加拉语</option><option value="ceb">宿务语</option><option value="ne">尼泊尔语</option><option value="eu">巴斯克语</option><option value="af">布尔语(南非荷兰语)</option><option value="iw">希伯来语</option><option value="el">希腊语</option><option value="ku">库尔德语</option><option value="fy">弗里西语</option><option value="de">德语</option><option value="it">意大利语</option><option value="yi">意第绪语</option><option value="la">拉丁语</option><option value="lv">拉脱维亚语</option><option value="no">挪威语</option><option value="cs">捷克语</option><option value="sk">斯洛伐克语</option><option value="sl">斯洛文尼亚语</option><option value="sw">斯瓦希里语</option><option value="pa">旁遮普语</option><option value="ja">日语</option><option value="ps">普什图语</option><option value="ka">格鲁吉亚语</option><option value="mi">毛利语</option><option value="fr">法语</option><option value="pl">波兰语</option><option value="bs">波斯尼亚语</option><option value="fa">波斯语</option><option value="te">泰卢固语</option><option value="ta">泰米尔语</option><option value="th">泰语</option><option value="ht">海地克里奥尔语</option><option value="ga">爱尔兰语</option><option value="et">爱沙尼亚语</option><option value="sv">瑞典语</option><option value="be">白俄罗斯语</option><option value="xh">科萨</option><option value="co">科西嘉语</option><option value="lt">立陶宛语</option><option value="so">索马里语</option><option value="yo">约鲁巴语</option><option value="my">缅甸语</option><option value="ro">罗马尼亚语</option><option value="lo">老挝语</option><option value="fi">芬兰语</option><option value="gd">苏格兰盖尔语</option><option value="hmn">苗语</option><option value="en">英语</option><option value="nl">荷兰语</option><option value="tl">菲律宾语</option><option value="sm">萨摩亚语</option><option value="pt">葡萄牙语</option><option value="mn">蒙古语</option><option value="es">西班牙语</option><option value="ha">豪萨语</option><option value="vi">越南语</option><option value="az">阿塞拜疆语</option><option value="am">阿姆哈拉语</option><option value="sq">阿尔巴尼亚语</option><option value="ar">阿拉伯语</option><option value="ko">韩语</option><option value="mk">马其顿语</option><option value="mg">马尔加什语</option><option value="mr">马拉地语</option><option value="ml">马拉雅拉姆语</option><option value="ms">马来语</option><option value="mt">马耳他语</option><option value="km">高棉语</option><option value="ny">齐切瓦语</option></select></td><td class="SL_td" width="5%" align="center"> </td><td class="SL_td" width="8%" align="center"><div id="SL_TTS_voice" title="undefined" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/ttsvoice.png&quot;);"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_copy" title="复制译文" class="SL_copy" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/copy.png&quot;);"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_bbl_font_patch"></div><div id="SL_bbl_font" title="字体大小" class="SL_bbl_font" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/font.png&quot;);"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_bbl_help" title="帮助" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/bhelp.png&quot;);"></div></td><td class="SL_td" width="15%" align="right"><div id="SL_pin" class="SL_pin_off" title="固定弹出窗口" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/pin-on.png&quot;);"></div></td></tr></table></div></div><div id="SL_shadow_translation_result" style="visibility: visible;"></div><div id="SL_loading" class="SL_loading" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/loading.gif&quot;);"></div><div id="SL_player2"></div><div id="SL_alert100">文本转语音功能仅限200个字符</div><div id="SL_Balloon_options" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/bg3.png&quot;) rgb(255, 255, 255);"><div id="SL_arrow_down" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/down.png&quot;);"></div><table id="SL_tbl_opt" width="100%"><tr><td width="5%" align="center"><input id="SL_BBL_locer" type="checkbox" checked="1" title="显示翻译器的按钮 3 秒"></td><td width="5%" align="left"><div id="SL_BBL_IMG" title="显示翻译器的按钮 3 秒" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/bbl-logo.png&quot;);"></div></td><td width="70%" align="center"><a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?bbl" target="_blank" class="SL_options" title="显示选项">选项</a> : <a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?hist" target="_blank" class="SL_options" title="翻译历史记录">历史</a> : <a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?feed" target="_blank" class="SL_options" title="反馈">反馈</a> : <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=GD9D8CPW8HFA2" target="_blank" class="SL_options" title="作出一点点贡献">Donate</a></td><td width="15%" align="right"><span id="SL_Balloon_Close" title="关闭">关闭</span></td></tr></table></div></div></div></body></html>
