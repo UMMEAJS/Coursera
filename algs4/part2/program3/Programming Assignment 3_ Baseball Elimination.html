@@ -1,0 +1,360 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- saved from url=(0064)http://coursera.cs.princeton.edu/algs4/assignments/baseball.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>
+Programming Assignment 3: Baseball Elimination
+</title></head>
+
+<body style="zoom: 1;">
+<h2>Programming Assignment 3: Baseball Elimination</h2>
+
+<p>
+Given the standings in a sports division at some point during the season,
+determine which teams have been mathematically eliminated from
+winning their division.
+
+</p><p>
+<strong>The baseball elimination problem.</strong>
+&nbsp;
+In the
+<a href="https://en.wikipedia.org/wiki/Maximum_flow_problem#Baseball_elimination">baseball elimination problem</a>,
+there is a division consisting of <em>n</em> teams.
+At some point during the season, team <em>i</em> has
+<code>w[i]</code> wins, <code>l[i]</code> losses, <code>r[i]</code> remaining games,
+and <code>g[i][j]</code> games left to play against team <em>j</em>.
+A team is mathematically eliminated if it cannot possibly finish the
+season in (or tied for) first place.
+The goal is to determine exactly which teams are mathematically eliminated.
+For simplicity, we assume that no games end in a tie (as is the case in Major League Baseball)
+and that there are no rainouts (i.e., every scheduled game is played).
+
+</p><p>
+The problem is not as easy as many sports writers would have you
+believe, in part because the answer depends not only on the
+number of games won and left to play, but also on the
+schedule of remaining games. To see the complication,
+consider the following scenario:
+
+</p><p>
+</p><blockquote><pre> 
+                w[i] l[i] r[i]        g[i][j]
+i  team         wins loss left   Atl Phi NY  Mon
+------------------------------------------------
+0  Atlanta       83   71    8     -   1   6   1
+1  Philadelphia  80   79    3     1   -   0   2
+2  New York      78   78    6     6   0   -   0
+3  Montreal      77   82    3     1   2   0   -
+</pre></blockquote>
+
+<p>
+Montreal is mathematically
+eliminated since it can finish with at most 80 wins and
+Atlanta already has 83 wins. This is the simplest reason
+for elimination. However, there can be more complicated
+reasons. For example, Philadelphia is also mathematically
+eliminated. It can finish the season with as many as 83 wins,
+which appears to be enough to tie Atlanta. But this would
+require Atlanta to lose all of its remaining games, including
+the 6 against New York, in which 
+case New York would finish with 84 wins.
+We note that New York is not yet mathematically eliminated
+despite the fact that it has fewer wins than Philadelphia.
+
+</p><p>
+It is sometimes not so easy for a sports writer to explain why
+a particular team is mathematically eliminated.
+Consider the following scenario from the
+American League East on August 30, 1996:
+
+
+</p><p>
+</p><blockquote><pre>
+                w[i] l[i] r[i]          g[i][j]
+i  team         wins loss left   NY Bal Bos Tor Det
+---------------------------------------------------
+0  New York      75   59   28     -   3   8   7   3
+1  Baltimore     71   63   28     3   -   2   7   7
+2  Boston        69   66   27     8   2   -   0   3
+3  Toronto       63   72   27     7   7   0   -   3
+4  Detroit       49   86   27     3   7   3   3   -
+</pre></blockquote>
+<p>
+
+It might appear that Detroit has a remote chance
+of catching New York and winning
+the division because Detroit can finish with as many as 76 wins if
+they go on a 27-game winning steak, which
+is one more than New York would have if they go on a 28-game losing streak.
+Try to convince yourself that Detroit is already mathematically eliminated.
+
+
+</p><p>
+<strong>A maxflow formulation.</strong>
+&nbsp;
+We now solve the baseball elimination problem by reducing it to the
+maxflow problem. To check whether 
+team <em>x</em> is eliminated, we consider two cases.
+
+</p><ul>
+<p></p><li><em>Trivial elimination.</em>
+If the maximum number of games team <em>x</em> can win is less than
+the number of wins of some other team <em>i</em>, then
+team <em>x</em> is trivially eliminated (as is Montreal in the example above).
+That is, if <code>w[x]</code> + <code>r[x]</code> &lt; <code>w[i]</code>, then
+team <em>x</em> is mathematically eliminated.
+
+<p></p></li><li><em>Nontrivial elimination.</em>
+Otherwise, we create a flow network and solve a maxflow problem in it.
+In the network, feasible integral
+flows correspond to outcomes of the remaining schedule.
+There are vertices corresponding to teams (other than team <em>x</em>) and to
+remaining divisional games (not involving team <em>x</em>).
+Intuitively, each unit of flow in the network corresponds to a remaining 
+game. As it flows through the network from <em>s</em> to <em>t</em>,
+it passes from a game vertex,
+say between teams <em>i</em> and <em>j</em>, then through one of the
+team vertices <em>i</em> or <em>j</em>, classifying this game as
+being won by that team.
+
+<p>
+
+More precisely, the flow network includes the following edges and capacities.
+</p><ul>
+<p></p><li>
+We connect an artificial source vertex <em>s</em> to
+each game vertex <em>i</em>-<em>j</em> and set its capacity to <code>g[i][j]</code>.
+If a flow uses all <code>g[i][j]</code> units of capacity on this edge,
+then we interpret this as playing all of these games, with the wins distributed
+between the team vertices <em>i</em> and <em>j</em>.
+
+<p></p></li><li>
+We connect each game vertex <em>i</em>-<em>j</em> with the two
+opposing team vertices to ensure that one of the two teams earns a win.
+We do not need to restrict the amount of flow on such edges.
+
+<p></p></li><li>
+Finally, we connect each team vertex to an artificial sink vertex <em>t</em>.
+We want to know if there is some way of completing all the games so that team 
+<em>x</em> ends up winning at least as many games as team <em>i</em>. Since
+team <em>x</em> can win as many as <code>w[x] + r[x]</code> games, we prevent
+team <em>i</em> from winning more than that many games in total, by 
+including an edge from team vertex <em>i</em> to the 
+sink vertex with capacity <code>w[x] + r[x] - w[i]</code>.
+</li></ul>
+
+<p>
+If all edges in the maxflow that are pointing from <em>s</em> are full,
+then this corresponds to assigning winners to all of
+the remaining games in such a way that no team wins more games than <em>x</em>.
+If some edges pointing from <em>s</em> are not full,
+then there is no scenario in which team <em>x</em> can win the division.
+In the flow network below Detroit is team <em>x = 4</em>.
+
+</p><center>
+<img src="./Programming Assignment 3_ Baseball Elimination_files/baseball.png" width="600">
+</center>
+
+<p>
+<strong>What the min cut tells us.</strong>
+&nbsp;
+By solving a maxflow problem, we can determine whether a given team
+is mathematically eliminated. We would also like to 
+<em>explain</em> the reason for the team's elimination to a friend 
+in nontechnical terms (using only grade-school arithmetic).
+Here's such an explanation for Detroit's
+elimination in the American League East example above.
+With the best possible luck, Detroit finishes the season with
+49 + 27 = 76 wins.
+Consider the subset of teams <em>R</em> = { New York, Baltimore, Boston, Toronto }.
+Collectively, they already have 75 + 71 + 69 + 63 = 278 wins; there are also 
+3 + 8 + 7 + 2 + 7  = 27 remaining games among them, so these four teams
+must win at least an additional 27 games.
+Thus, on average, the teams in <em>R</em> win at least 305 / 4 = 76.25 games.
+Regardless of the outcome, one team in <em>R</em> will win at least
+77 games, thereby eliminating Detroit.
+
+</p></li></ul>
+<p>
+
+In fact, when a team is mathematically eliminated
+there always exists such a convincing
+<em>certificate of elimination</em>,
+where <em>R</em> is some subset of the other teams in the division.
+Moreover, you can always find such a subset <em>R</em> by choosing the
+team vertices on the source side of a min <em>s</em>-<em>t</em> cut in the 
+baseball elimination network.
+Note that although we solved a maxflow/mincut problem to find the subset <em>R</em>,
+once we have it, the argument for a team's elimination involves only grade-school algebra.
+
+</p><p>
+<strong>Your assignment.</strong>
+&nbsp;
+Write an immutable data type <code>BaseballElimination</code> that represents a sports division and determines
+which teams are mathematically eliminated by implementing the following API:
+
+</p><blockquote>
+<pre><b>public BaseballElimination(String filename)                    </b><font color="gray">// create a baseball division from given filename in format specified below</font>
+<b>public              int numberOfTeams()                        </b><font color="gray">// number of teams</font>
+<b>public Iterable&lt;String&gt; teams()                                </b><font color="gray">// all teams</font>
+<b>public              int wins(String team)                      </b><font color="gray">// number of wins for given team</font>
+<b>public              int losses(String team)                    </b><font color="gray">// number of losses for given team</font>
+<b>public              int remaining(String team)                 </b><font color="gray">// number of remaining games for given team</font>
+<b>public              int against(String team1, String team2)    </b><font color="gray">// number of remaining games between team1 and team2</font>
+<b>public          boolean isEliminated(String team)              </b><font color="gray">// is given team eliminated?</font>
+<b>public Iterable&lt;String&gt; certificateOfElimination(String team)  </b><font color="gray">// subset R of teams that eliminates given team; null if not eliminated</font>
+</pre>
+</blockquote>
+
+
+<p>
+The last six methods should throw a <code>java.lang.IllegalArgumentException</code>
+if one (or both) of the input arguments are invalid teams.
+
+
+</p><p>
+<strong>Input format.</strong>
+&nbsp;
+The input format is the number of teams in the division <em>n</em> followed by one line for each team.
+Each line contains the team name (with no internal whitespace characters), the number of wins, the number
+of losses, the number of remaining games, and the number of remaining games against each
+team in the division.
+
+For example, the input files
+<a href="http://coursera.cs.princeton.edu/algs4/testing/baseball/teams4.txt">teams4.txt</a>
+and
+<a href="http://coursera.cs.princeton.edu/algs4/testing/baseball/teams5.txt">teams5.txt</a>
+correspond to the two examples discussed above.
+
+</p><p>
+</p><blockquote><pre>% <b>more teams4.txt</b>
+4
+Atlanta       83 71  8  0 1 6 1
+Philadelphia  80 79  3  1 0 0 2
+New_York      78 78  6  6 0 0 0
+Montreal      77 82  3  1 2 0 0
+
+% <b>more teams5.txt</b>
+5
+New_York    75 59 28   0 3 8 7 3
+Baltimore   71 63 28   3 0 2 7 7
+Boston      69 66 27   8 2 0 0 3
+Toronto     63 72 27   7 7 0 0 3
+Detroit     49 86 27   3 7 3 3 0
+</pre></blockquote>
+
+You may assume that <em>n</em> ≥ 1 and that the input files
+are in the specified format and internally consistent.
+Note that a team's number of remaining games
+does not necessarily equal the sum of the remaining games against teams in its division
+because a team may play opponents outside its division.
+
+<p>
+<strong>Output format.</strong>
+&nbsp;
+Use the following <code>main()</code> function, which reads in a sports division
+from an input file and prints whether each team
+is mathematically eliminated and a certificate of elimination for
+each team that is eliminated:
+
+</p><blockquote>
+<pre>public static void main(String[] args) {
+    BaseballElimination division = new BaseballElimination(args[0]);
+    for (String team : division.teams()) {
+        if (division.isEliminated(team)) {
+            StdOut.print(team + " is eliminated by the subset R = { ");
+            for (String t : division.certificateOfElimination(team)) {
+                StdOut.print(t + " ");
+            }
+            StdOut.println("}");
+        }
+        else {
+            StdOut.println(team + " is not eliminated");
+        }
+    }
+}
+</pre>
+</blockquote>
+
+Below is the desired output:
+
+<p>
+</p><blockquote><pre>% <b>java-algs4 BaseballElimination teams4.txt</b>
+Atlanta is not eliminated
+Philadelphia is eliminated by the subset R = { Atlanta New_York }
+New_York is not eliminated
+Montreal is eliminated by the subset R = { Atlanta }
+
+% <b>java-algs4 BaseballElimination teams5.txt</b>
+New_York is not eliminated
+Baltimore is not eliminated
+Boston is not eliminated
+Toronto is not eliminated
+Detroit is eliminated by the subset R = { New_York Baltimore Boston Toronto }
+
+</pre></blockquote>
+
+
+<p>
+<strong>Analysis (optional and ungraded).</strong>
+&nbsp;
+
+Analyze the worst-case memory usage and running time of your algorithm.
+
+</p><ul>
+
+<p></p><li> What is the order of growth of the amount of memory (in the worst case)
+that your program uses to determine whether <em>one</em> team is eliminated?
+In particular, how many vertices and edges are in the flow network
+as a function of the number of teams <em>n</em>?
+
+<p></p></li><li> What is the order of growth of the running time (in the worst case)
+of your program to determine whether <em>one</em> team is eliminated
+as a function of the number of teams <em>n</em>?
+In your calculation, assume that the order of growth of the running time 
+(in the worst case) to compute a maxflow in a network
+with <em>V</em> vertices and <em>E</em> edges is 
+<em>V</em> <em>E</em><sup>2</sup>.
+
+</li></ul>
+
+Also, use the output of your program to answer the following question:
+<ul>
+
+<p></p><li> Consider the sports division defined in
+<a href="http://coursera.cs.princeton.edu/algs4/testing/baseball/teams12.txt">teams12.txt</a>.
+Explain in nontechnical terms (using the results of certificate of 
+elimination and grade-school arithmetic) why Japan is mathematically 
+eliminated.
+</li></ul>
+
+
+<!--
+<p>
+<strong>Extra credit.</strong>
+&nbsp;
+Create and submit an interesting test input file 
+(in the specified format) and name it <code>teams.txt</code>.
+Your input file should contain one or more teams whose elimination
+would not be obvious to a sports writer.
+Ideally, your input file should be based on real-world data.
+-->
+
+<p>
+<strong>Submission.</strong>
+&nbsp;
+Submit <code>BaseballElimination.java</code> and any other supporting files
+(excluding <code>algs4.jar</code>).
+Your may not call any library functions other than those in <code>java.lang</code>,
+<code>java.util</code>, and <code>algs4.jar</code>.
+
+
+
+</p><address><small>
+This assignment was developed by Kevin Wayne.
+<br>Copyright © 2003.
+</small>
+</address>
+
+
+<div id="SL_balloon_obj" alt="0" style="display: block;"><div id="SL_button" class="SL_ImTranslatorLogo" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/imtranslator-s.png&quot;); display: none; opacity: 0; transition: visibility 2s ease 0s, opacity 2s linear 0s;"></div><div id="SL_shadow_translation_result2" style="display: none; font-size: 14px; line-height: 20px; margin-top: 1548px; margin-left: 50px; direction: ltr; text-align: left;"><img border="0" class="PPB_voice1" src="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/tts.png" title="聆听翻译" id="SL_BBL_VOICE" style="background:url(chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/tts.png);" lang="zh-CN">&nbsp;一成不变<br></div><div id="SL_shadow_translator" style="top: 1629.55px; left: 49.5px; display: none; box-shadow: rgb(186, 185, 181) 0px 0px 0px; width: 467px;"><div id="SL_planshet" style="background: rgb(239, 239, 239);"><div id="SL_arrow_up" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/up.png&quot;); display: none; left: 214px;"></div><div id="SL_Bproviders" style="visibility: visible;"><div class="SL_BL_LABLE_ON" title="Google" id="SL_P0">G</div><div class="SL_BL_LABLE_OFF" title="Microsoft" id="SL_P1">M</div><div class="SL_BL_LABLE_DEACT" title="Translator" id="SL_P2">T</div><div class="SL_BL_LABLE_OFF" title="Yandex" id="SL_P3">Y</div></div><div id="SL_alert_bbl" style="display: none;"><div id="SLHKclose" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/delete.png&quot;);"></div><div id="SL_alert_cont"></div></div><div id="SL_TB"><table id="SL_tables" cellspacing="1"><tr><td class="SL_td" width="10%" align="right"><input id="SL_locer" type="checkbox" title="锁定语言"></td><td class="SL_td" width="20%" align="left"><select id="SL_lng_from" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/select.png&quot;) 100% 0px no-repeat rgb(255, 255, 255);" title="检测到： 英语"><option value="auto">检测语言</option><option value="eo">世界语</option><option value="zh-CN">中文简体</option><option value="zh-TW">中文繁体</option><option value="da">丹麦语</option><option value="uk">乌克兰语</option><option value="uz">乌兹别克语</option><option value="ur">乌尔都语</option><option value="hy">亚美尼亚语</option><option value="ig">伊博语</option><option value="ru">俄语</option><option value="bg">保加利亚语</option><option value="sd">信德语</option><option value="sn">修纳语</option><option value="si">僧伽罗语</option><option value="hr">克罗地亚语</option><option value="is">冰岛语</option><option value="gl">加利西亚语</option><option value="ca">加泰罗尼亚语</option><option value="hu">匈牙利语</option><option value="zu">南非祖鲁语</option><option value="kn">卡纳达语</option><option value="lb">卢森堡语</option><option value="hi">印地语</option><option value="su">印尼巽他语</option><option value="jw">印尼爪哇语</option><option value="id">印尼语</option><option value="gu">古吉拉特语</option><option value="ky">吉尔吉斯语</option><option value="kk">哈萨克语</option><option value="tr">土耳其语</option><option value="tg">塔吉克语</option><option value="sr">塞尔维亚语</option><option value="st">塞索托语</option><option value="haw">夏威夷语</option><option value="cy">威尔士语</option><option value="bn">孟加拉语</option><option value="ceb">宿务语</option><option value="ne">尼泊尔语</option><option value="eu">巴斯克语</option><option value="af">布尔语(南非荷兰语)</option><option value="iw">希伯来语</option><option value="el">希腊语</option><option value="ku">库尔德语</option><option value="fy">弗里西语</option><option value="de">德语</option><option value="it">意大利语</option><option value="yi">意第绪语</option><option value="la">拉丁语</option><option value="lv">拉脱维亚语</option><option value="no">挪威语</option><option value="cs">捷克语</option><option value="sk">斯洛伐克语</option><option value="sl">斯洛文尼亚语</option><option value="sw">斯瓦希里语</option><option value="pa">旁遮普语</option><option value="ja">日语</option><option value="ps">普什图语</option><option value="ka">格鲁吉亚语</option><option value="mi">毛利语</option><option value="fr">法语</option><option value="pl">波兰语</option><option value="bs">波斯尼亚语</option><option value="fa">波斯语</option><option value="te">泰卢固语</option><option value="ta">泰米尔语</option><option value="th">泰语</option><option value="ht">海地克里奥尔语</option><option value="ga">爱尔兰语</option><option value="et">爱沙尼亚语</option><option value="sv">瑞典语</option><option value="be">白俄罗斯语</option><option value="xh">科萨</option><option value="co">科西嘉语</option><option value="lt">立陶宛语</option><option value="so">索马里语</option><option value="yo">约鲁巴语</option><option value="my">缅甸语</option><option value="ro">罗马尼亚语</option><option value="lo">老挝语</option><option value="fi">芬兰语</option><option value="gd">苏格兰盖尔语</option><option value="hmn">苗语</option><option value="en">英语</option><option value="nl">荷兰语</option><option value="tl">菲律宾语</option><option value="sm">萨摩亚语</option><option value="pt">葡萄牙语</option><option value="mn">蒙古语</option><option value="es">西班牙语</option><option value="ha">豪萨语</option><option value="vi">越南语</option><option value="az">阿塞拜疆语</option><option value="am">阿姆哈拉语</option><option value="sq">阿尔巴尼亚语</option><option value="ar">阿拉伯语</option><option value="ko">韩语</option><option value="mk">马其顿语</option><option value="mg">马尔加什语</option><option value="mr">马拉地语</option><option value="ml">马拉雅拉姆语</option><option value="ms">马来语</option><option value="mt">马耳他语</option><option value="km">高棉语</option><option value="ny">齐切瓦语</option></select></td><td class="SL_td" width="3" align="center"><div id="SL_switch_b" title="切换语言" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/switchb.png&quot;); cursor: pointer;"></div></td><td class="SL_td" width="20%" align="left"><select id="SL_lng_to" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/select.png&quot;) 100% 0px no-repeat rgb(255, 255, 255);"><option value="eo">世界语</option><option selected="selected" value="zh-CN">中文简体</option><option value="zh-TW">中文繁体</option><option value="da">丹麦语</option><option value="uk">乌克兰语</option><option value="uz">乌兹别克语</option><option value="ur">乌尔都语</option><option value="hy">亚美尼亚语</option><option value="ig">伊博语</option><option value="ru">俄语</option><option value="bg">保加利亚语</option><option value="sd">信德语</option><option value="sn">修纳语</option><option value="si">僧伽罗语</option><option value="hr">克罗地亚语</option><option value="is">冰岛语</option><option value="gl">加利西亚语</option><option value="ca">加泰罗尼亚语</option><option value="hu">匈牙利语</option><option value="zu">南非祖鲁语</option><option value="kn">卡纳达语</option><option value="lb">卢森堡语</option><option value="hi">印地语</option><option value="su">印尼巽他语</option><option value="jw">印尼爪哇语</option><option value="id">印尼语</option><option value="gu">古吉拉特语</option><option value="ky">吉尔吉斯语</option><option value="kk">哈萨克语</option><option value="tr">土耳其语</option><option value="tg">塔吉克语</option><option value="sr">塞尔维亚语</option><option value="st">塞索托语</option><option value="haw">夏威夷语</option><option value="cy">威尔士语</option><option value="bn">孟加拉语</option><option value="ceb">宿务语</option><option value="ne">尼泊尔语</option><option value="eu">巴斯克语</option><option value="af">布尔语(南非荷兰语)</option><option value="iw">希伯来语</option><option value="el">希腊语</option><option value="ku">库尔德语</option><option value="fy">弗里西语</option><option value="de">德语</option><option value="it">意大利语</option><option value="yi">意第绪语</option><option value="la">拉丁语</option><option value="lv">拉脱维亚语</option><option value="no">挪威语</option><option value="cs">捷克语</option><option value="sk">斯洛伐克语</option><option value="sl">斯洛文尼亚语</option><option value="sw">斯瓦希里语</option><option value="pa">旁遮普语</option><option value="ja">日语</option><option value="ps">普什图语</option><option value="ka">格鲁吉亚语</option><option value="mi">毛利语</option><option value="fr">法语</option><option value="pl">波兰语</option><option value="bs">波斯尼亚语</option><option value="fa">波斯语</option><option value="te">泰卢固语</option><option value="ta">泰米尔语</option><option value="th">泰语</option><option value="ht">海地克里奥尔语</option><option value="ga">爱尔兰语</option><option value="et">爱沙尼亚语</option><option value="sv">瑞典语</option><option value="be">白俄罗斯语</option><option value="xh">科萨</option><option value="co">科西嘉语</option><option value="lt">立陶宛语</option><option value="so">索马里语</option><option value="yo">约鲁巴语</option><option value="my">缅甸语</option><option value="ro">罗马尼亚语</option><option value="lo">老挝语</option><option value="fi">芬兰语</option><option value="gd">苏格兰盖尔语</option><option value="hmn">苗语</option><option value="en">英语</option><option value="nl">荷兰语</option><option value="tl">菲律宾语</option><option value="sm">萨摩亚语</option><option value="pt">葡萄牙语</option><option value="mn">蒙古语</option><option value="es">西班牙语</option><option value="ha">豪萨语</option><option value="vi">越南语</option><option value="az">阿塞拜疆语</option><option value="am">阿姆哈拉语</option><option value="sq">阿尔巴尼亚语</option><option value="ar">阿拉伯语</option><option value="ko">韩语</option><option value="mk">马其顿语</option><option value="mg">马尔加什语</option><option value="mr">马拉地语</option><option value="ml">马拉雅拉姆语</option><option value="ms">马来语</option><option value="mt">马耳他语</option><option value="km">高棉语</option><option value="ny">齐切瓦语</option></select></td><td class="SL_td" width="5%" align="center"> </td><td class="SL_td" width="8%" align="center"><div id="SL_TTS_voice" title="英语" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/ttsvoice.png&quot;); display: block; visibility: visible;"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_copy" title="复制译文" class="SL_copy_hand" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/copy.png&quot;);"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_bbl_font_patch" style="display: none;"></div><div id="SL_bbl_font" title="字体大小" class="SL_font_on" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/font.png&quot;);"></div></td><td class="SL_td" width="8%" align="center"><div id="SL_bbl_help" title="帮助" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/bhelp.png&quot;);"></div></td><td class="SL_td" width="15%" align="right"><div id="SL_pin" class="SL_pin_off" title="固定弹出窗口" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/pin-off.png&quot;);"></div></td></tr></table></div></div><div id="SL_shadow_translation_result" style="font-size: 14px; line-height: 20px; direction: ltr; text-align: left; visibility: visible;"><img border="0" class="PPB_voice1" src="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/tts.png" title="聆听翻译" id="SL_BBL_VOICE" style="background:url(chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/tts.png);" lang="zh-CN">&nbsp;一成不变<br></div><div id="SL_loading" class="SL_loading" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/loading.gif&quot;); display: none;"></div><div id="SL_player2" style="display: none; height: 0px;"></div><div id="SL_alert100" style="display: none;">文本转语音功能仅限200个字符</div><div id="SL_Balloon_options" style="background: rgb(239, 239, 239);"><div id="SL_arrow_down" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/down.png&quot;); display: block; left: 214px;"></div><table id="SL_tbl_opt" width="100%"><tr><td width="5%" align="center"><input id="SL_BBL_locer" type="checkbox" checked="1" title="显示翻译器的按钮 3 秒"></td><td width="5%" align="left"><div id="SL_BBL_IMG" title="显示翻译器的按钮 3 秒" style="background: url(&quot;chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/img/util/bbl-logo.png&quot;);"></div></td><td width="70%" align="center"><a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?bbl" target="_blank" class="SL_options" title="显示选项">选项</a> : <a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?hist" target="_blank" class="SL_options" title="翻译历史记录">历史</a> : <a href="chrome-extension://noaijdpnepcgjemiklgfkcfbkokogabh/content/html/options/options.html?feed" target="_blank" class="SL_options" title="反馈">反馈</a> : <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=GD9D8CPW8HFA2" target="_blank" class="SL_options" title="作出一点点贡献">Donate</a></td><td width="15%" align="right"><span id="SL_Balloon_Close" title="关闭">关闭</span></td></tr></table></div></div></div></body></html>
