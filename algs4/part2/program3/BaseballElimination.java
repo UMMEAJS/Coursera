@@ -8,7 +8,6 @@ import edu.princeton.cs.algs4.FlowEdge;
 import edu.princeton.cs.algs4.FlowNetwork;
 import edu.princeton.cs.algs4.FordFulkerson;
 
-
 public class BaseballElimination {
 	private final int num_teams;
 	private final String[] name_teams;
@@ -19,6 +18,7 @@ public class BaseballElimination {
 	private final boolean[] isEliminated;
 	private final ArrayList<String>[] R;
 	
+	@SuppressWarnings("unchecked")
 	public BaseballElimination(String filename) { // create a baseball division from given filename in format specified below
 		In in = new In(filename);
 		num_teams = in.readInt();
