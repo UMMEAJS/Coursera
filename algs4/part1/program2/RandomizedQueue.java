@@ -8,6 +8,7 @@ import edu.princeton.cs.algs4.StdRandom;
 public class RandomizedQueue<Item> implements Iterable<Item> {
 	private int size;
 	private static final int THRESHOLD = 1;
+	
 	@SuppressWarnings("unchecked")
 	private Item[] items = (Item[]) new Object[1];
 	

@@ -99,7 +99,7 @@ public class BaseballElimination {
 	
 	private void validate(int i) {
 		if (i < 0 || i >= num_teams)
-			throw new java.lang.IllegalArgumentException();
+			throw new IllegalArgumentException();
 	}
 	
 	private int getIndexOfTeam(String team) {

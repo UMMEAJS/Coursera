@@ -23,7 +23,7 @@ public class BoggleBoard {
     };
 
     // the 16 Boggle dice (1983 version)
-    @SuppressWarnings("unused")
+	@SuppressWarnings("unused")
 	private static final String[] BOGGLE_1983 = {
         "AACIOT", "ABILTY", "ABJMOQ", "ACDEMP",
         "ACELRS", "ADENVZ", "AHMORS", "BIFORX",
@@ -32,7 +32,7 @@ public class BoggleBoard {
     };
 
     // the 25 Boggle Master / Boggle Deluxe dice
-    @SuppressWarnings("unused")
+	@SuppressWarnings("unused")
 	private static final String[] BOGGLE_MASTER = {
         "AAAFRS", "AAEEEE", "AAFIRS", "ADENNN", "AEEEEM",
         "AEEGMU", "AEGMNN", "AFIRSY", "BJKQXZ", "CCNSTW",
@@ -42,7 +42,7 @@ public class BoggleBoard {
     };
 
     // the 25 Big Boggle dice
-    @SuppressWarnings("unused")
+	@SuppressWarnings("unused")
 	private static final String[] BOGGLE_BIG = {
         "AAAFRS", "AAEEEE", "AAFIRS", "ADENNN", "AEEEEM",
         "AEEGMU", "AEGMNN", "AFIRSY", "BJKQXZ", "CCENST",

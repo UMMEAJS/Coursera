@@ -5,18 +5,18 @@ import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdOut;
 
 public class BoggleSolver {
-    private RWayTrie dict;
-    private static int dnum = 8;
-    private static int[][] direction = { {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1} };
+    private final RWayTrie dict;
+    private final static int dnum = 8;
+    private final static int[][] direction = { {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1} };
 	
-	// Initializes the data structure using the given array of strings as the dictionary.
+    // Initializes the data structure using the given array of strings as the dictionary.
     // (You can assume each word in the dictionary contains only the uppercase letters A through Z.)
     public BoggleSolver(String[] dictionary) {
     	dict = new RWayTrie();
     	for (int i = 0; i < dictionary.length; i++)
     		dict.put(dictionary[i]);
     }
-
+    
     private void getValidWords(int row, int col, StringBuilder word, RWayTrie.Node node, BoggleBoard board, HashSet<String> words, boolean[][] isVisit) {
     	if (row < 0 || row >= board.rows() || col < 0 || col >= board.cols())
     		return;
@@ -35,7 +35,7 @@ public class BoggleSolver {
     	word.append(c);
     	if (c == 'Q') word.append('U');
     	String str = word.toString();
-    	if (node.getFlag() && scoreOf(str) > 0) words.add(str);
+    	if (node.getFlag() && str.length() >= 3) words.add(str);
     	for (int i = 0; i < dnum; i++)
     		getValidWords(row + direction[i][0], col + direction[i][1], word, node, board, words, isVisit);
     	isVisit[row][col] = false;

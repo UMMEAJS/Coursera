@@ -17,7 +17,7 @@ public class SAP {
 	private int[] distToW;
 	private boolean[] marked;
 	
-	// constructor takes a digraph (not necessarily a DAG)
+    // constructor takes a digraph (not necessarily a DAG)
     public SAP(Digraph G) {
     	if (G == null)
     		throw new IllegalArgumentException();
