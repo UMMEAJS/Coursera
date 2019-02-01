@@ -7,7 +7,7 @@ public class BurrowsWheeler {
     // apply Burrows-Wheeler transform, reading from standard input and writing to standard output
     public static void transform() {
     	StringBuilder input = new StringBuilder();
-    	while (!BinaryStdIn.isEmpty()) {
+        while (!BinaryStdIn.isEmpty()) {
     		char c = BinaryStdIn.readChar();
     		input.append(c);
     	}
