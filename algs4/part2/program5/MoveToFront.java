@@ -4,23 +4,23 @@ import edu.princeton.cs.algs4.BinaryStdIn;
 import edu.princeton.cs.algs4.BinaryStdOut;
 
 public class MoveToFront {
-    private final static int R = 256;
+	private final static int R = 256;
 	
-	private static char[] initAlphabet() {
+    private static char[] initAlphabet() {
 		char[] alphabet = new char[R];
 		for (int i = 0; i < R; i++)
 			alphabet[i] = (char)i;
 		return alphabet;
 	}
 	
-	private static int findIdx(char[] alphabet, char c) {
+    private static int findIdx(char[] alphabet, char c) {
 		for (int i = 0; i < alphabet.length; i++)
 			if (alphabet[i] == c)
 				return i;
 		return -1;
 	}
 	
-	private static void moveToFront(char[] alphabet, int idx) {
+    private static void moveToFront(char[] alphabet, int idx) {
 		char c = alphabet[idx];
 		for (int i = idx-1; i >= 0; i--)
 			alphabet[i+1] = alphabet[i];
